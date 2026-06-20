@@ -1,0 +1,12 @@
+# Secours uniquement si Dokploy reste par erreur en mode Nixpacks.
+# La méthode recommandée reste Build Type = Dockerfile.
+providers = ["python"]
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.12"
+NIXPACKS_PYTHON_PACKAGE_MANAGER = "skip"
+PYTHONUNBUFFERED = "1"
+PYTHONDONTWRITEBYTECODE = "1"
+
+[start]
+cmd = "python app.py --no-browser"

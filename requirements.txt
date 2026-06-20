@@ -1,0 +1,2 @@
+# FundFlow fonctionne avec la bibliothèque standard Python uniquement.
+# Aucun package externe n'est requis pour la version stable.

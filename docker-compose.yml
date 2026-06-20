@@ -1,0 +1,27 @@
+services:
+  fundflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8000"
+      DATA_DIR: "/app/data"
+      DB_FILE: "fundflow_stable.db"
+    volumes:
+      - fundflow_data:/app/data
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  fundflow_data:
