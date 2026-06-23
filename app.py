@@ -259,7 +259,13 @@ def user_avatar(user: sqlite3.Row, size: int = 42) -> str:
         return f'<img class="avatar" style="width:{size}px;height:{size}px" src="{esc(user["photo_data"])}" alt="photo">'
     initials = "".join([p[:1].upper() for p in (user["name"] if user else "U").split()[:2]]) or "U"
     return f'<div class="avatar initials" style="width:{size}px;height:{size}px">{esc(initials)}</div>'
+TRACKING_CODE = r"""
+<!-- DÉBUT CODE DE SUIVI -->
 
+<script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script>
+
+<!-- FIN CODE DE SUIVI -->
+"""
 
 def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head: str = "") -> str:
     logo = get_logo()
@@ -295,6 +301,8 @@ def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head
 <title>{esc(title)} — {APP_NAME}</title>
 <style>{CSS}</style>
 {extra_head}
+{TRACKING_CODE}
+<!-- <script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script> -->
 </head>
 <body>
 {nav}
