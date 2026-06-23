@@ -302,7 +302,7 @@ def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head
 <style>{CSS}</style>
 {extra_head}
 {TRACKING_CODE}
-<!-- <script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script> -->
+<script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script>
 </head>
 <body>
 {nav}
