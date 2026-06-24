@@ -62,7 +62,7 @@ ROLES = {
 
 
 MENU_ITEMS = {
-    "home": ("⌂", "Accueil", "/"),
+    "home": ("⌂", "Accueil", "/home"),
     "dashboard": ("▦", "Tableau de bord", "/dashboard"),
     "new_request": ("＋", "Nouvelle demande", "/requests/new"),
     "vehicle_reports": ("▤", "Rapports véhicules", "/vehicle/reports"),
@@ -418,6 +418,42 @@ TRACKING_CODE = r"""
 <script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script>
 <!-- FIN CODE DE SUIVI -->
 """
+
+WORKSPACE_OPTION_DETAILS = {
+    "dashboard": "Consultez les demandes, validations, indicateurs et activités récentes.",
+    "new_request": "Créez une demande financière, matérielle ou opérationnelle.",
+    "vehicle_reports": "Consultez les rapports des chauffeurs et le suivi des véhicules.",
+    "vehicle_positions": "Visualisez les dernières positions transmises par les chauffeurs.",
+    "moods": "Partagez une information courte avec l'équipe pendant 24 heures.",
+    "appearance": "Personnalisez vos couleurs et votre arrière-plan privé.",
+    "profile": "Mettez à jour vos informations professionnelles et votre photo.",
+    "users": "Gérez les comptes, les rôles et les accès des collaborateurs.",
+    "settings": "Configurez le logo, l'accueil et l'organisation générale de l'application.",
+}
+
+
+def workspace_option_allowed(key: str, user: sqlite3.Row) -> bool:
+    if key in ("users", "settings") and user["role"] != "admin":
+        return False
+    if key == "vehicle_positions" and user["role"] not in ("chauffeur", "logistique", "admin"):
+        return False
+    return key in WORKSPACE_OPTION_DETAILS
+
+
+def workspace_icon_svg(key: str) -> str:
+    icons = {
+        "dashboard": '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>',
+        "new_request": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h5M12 11v6M9 14h6"/></svg>',
+        "vehicle_reports": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>',
+        "vehicle_positions": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.1 7-13a7 7 0 1 0-14 0c0 6.9 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/></svg>',
+        "moods": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 10h.01M15.5 10h.01M8.5 15s1.2 2 3.5 2 3.5-2 3.5-2"/></svg>',
+        "appearance": '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h4a5 5 0 0 0 0-10z"/><circle cx="7.5" cy="10" r="1"/><circle cx="10" cy="6.5" r="1"/><circle cx="15" cy="7" r="1"/></svg>',
+        "profile": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+        "users": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a5 5 0 0 1 7 0"/></svg>',
+        "settings": '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"/></svg>',
+    }
+    return icons.get(key, icons["dashboard"])
+
 def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head: str = "", page_key: str = "") -> str:
     page_key = page_key or page_key_from_title(title)
     logo = get_logo()
@@ -475,6 +511,12 @@ CSS = r"""
 @media(max-width:1000px){.login-shell{grid-template-columns:1fr;max-width:600px}.login-showcase{min-height:auto;padding:36px}.login-showcase h1{font-size:34px}.hero{grid-template-columns:1fr}.hero-visual{min-height:370px}.feature-grid,.workflow-row{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:900px){.sidebar,.sidebar-right .sidebar{position:static;width:auto}.content,.sidebar-right .content{margin-left:0;margin-right:0}.grid{grid-template-columns:1fr}.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:span 1}.topbar{display:block}.userbox{margin-top:14px;width:max-content}.table{font-size:14px;display:block;overflow:auto}.table th:nth-child(4),.table td:nth-child(4){display:none}.public-nav{padding:0 18px}.public-actions .secondary{display:none}}
 @media(max-width:650px){.auth-page{padding:14px}.login-panel{padding:28px 20px}.login-showcase{display:none}.feature-grid,.workflow-row,.color-grid{grid-template-columns:1fr}.hero{padding:52px 20px}.hero h1{font-size:40px}.hero-visual{min-height:330px}.hero-dashboard{inset:28px 18px 22px}.public-nav{height:70px}.public-brand strong{font-size:15px}.site-footer{display:block}}
+
+/* Accueil privé après connexion */
+.workspace-hero{position:relative;overflow:hidden;border-radius:26px;padding:34px;background:linear-gradient(135deg,#0f172a 0%,#0f766e 58%,#2563eb 100%);color:#fff;box-shadow:0 24px 60px rgba(15,23,42,.18);margin-bottom:24px}.workspace-hero:after{content:"";position:absolute;width:330px;height:330px;border-radius:50%;right:-100px;top:-150px;background:rgba(255,255,255,.11)}.workspace-hero-content{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.workspace-hero h2{font-size:clamp(28px,4vw,44px);margin:7px 0 10px}.workspace-hero p{max-width:720px;margin:0;color:#dbeafe;font-size:17px}.workspace-hero-actions{display:flex;gap:10px;flex-wrap:wrap}.workspace-hero .btn{background:#fff;color:#0f172a}.workspace-hero .btn.secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.28)}.workspace-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:25px}.workspace-summary-card{background:rgba(255,255,255,.92);border:1px solid rgba(226,232,240,.9);border-radius:18px;padding:18px;box-shadow:0 10px 28px rgba(15,23,42,.06)}.workspace-summary-card strong{font-size:28px;display:block;margin-top:4px}.workspace-section-head{display:flex;justify-content:space-between;align-items:end;gap:18px;margin:8px 0 16px}.workspace-section-head h2{margin:4px 0}.workspace-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.workspace-option{position:relative;display:flex;flex-direction:column;min-height:230px;padding:24px;border-radius:22px;background:rgba(255,255,255,.95);border:1px solid var(--line);box-shadow:0 12px 32px rgba(15,23,42,.07);color:var(--text);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.workspace-option:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--primary),var(--accent))}.workspace-option:hover{transform:translateY(-5px);box-shadow:0 22px 48px rgba(15,23,42,.13);border-color:#99f6e4;color:var(--text)}.workspace-option-icon{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#ccfbf1,#dbeafe);color:#0f766e;margin-bottom:20px}.workspace-option-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.workspace-option h3{font-size:20px;margin:0 0 9px}.workspace-option p{color:var(--muted);margin:0 0 20px;flex:1}.workspace-option-open{display:flex;align-items:center;justify-content:space-between;font-weight:800;color:var(--primary);padding-top:14px;border-top:1px solid var(--line)}.workspace-option-open span:last-child{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#ecfdf5;transition:transform .2s ease}.workspace-option:hover .workspace-option-open span:last-child{transform:translateX(3px)}
+@media(max-width:1050px){.workspace-options{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-hero-content{align-items:flex-start;flex-direction:column}.workspace-summary{grid-template-columns:repeat(3,minmax(150px,1fr));overflow:auto}}
+@media(max-width:680px){.workspace-options,.workspace-summary{grid-template-columns:1fr}.workspace-hero{padding:26px 20px}.workspace-section-head{display:block}.workspace-option{min-height:210px}}
+
 """
 
 
@@ -562,8 +604,10 @@ class FundFlowHandler(BaseHTTPRequestHandler):
 
         if path == "/health":
             self.send_json({"ok": True, "time": now_str()})
-        elif path in ("/", "/home"):
+        elif path == "/":
             self.homepage()
+        elif path == "/home":
+            self.workspace_home()
         elif path == "/login":
             self.login(method)
         elif path == "/register":
@@ -630,11 +674,11 @@ class FundFlowHandler(BaseHTTPRequestHandler):
         secondary_label = get_setting("homepage_secondary_cta", "Créer un compte")
         hero_image = valid_image_data(get_setting("homepage_hero_image", ""))
         hero_style = f' style="background-image:url(\'{esc(hero_image)}\')"' if hero_image else ""
-        primary_href = "/dashboard" if user else "/login"
+        primary_href = "/home" if user else "/login"
         secondary_href = "/appearance" if user else "/register"
         secondary_text = "Personnaliser mon espace" if user else secondary_label
         public_actions = (
-            '<a class="btn secondary" href="/dashboard">Tableau de bord</a><a class="btn" href="/logout">Déconnexion</a>'
+            '<a class="btn secondary" href="/home">Mon espace</a><a class="btn" href="/logout">Déconnexion</a>'
             if user else
             '<a class="btn secondary" href="/login">Connexion</a><a class="btn" href="/register">Créer un compte</a>'
         )
@@ -650,7 +694,7 @@ class FundFlowHandler(BaseHTTPRequestHandler):
                 <p>{esc(subtitle)}</p>
                 <p class="muted">{esc(message)}</p>
                 <div class="hero-actions">
-                    <a class="btn" href="{primary_href}">{esc(primary_label if not user else 'Ouvrir le tableau de bord')}</a>
+                    <a class="btn" href="{primary_href}">{esc(primary_label if not user else 'Ouvrir mon espace')}</a>
                     <a class="btn secondary" href="{secondary_href}">{esc(secondary_text)}</a>
                 </div>
             </div>
@@ -684,6 +728,64 @@ class FundFlowHandler(BaseHTTPRequestHandler):
         """
         self.send_html(layout("Accueil", body, None, page_key="home"))
 
+
+    def workspace_home(self) -> None:
+        user = self.require_user()
+        if not user:
+            return
+
+        visible_requests = self.visible_requests(user)
+        visible_reports = self.visible_vehicle_reports(user)
+        pending_count = sum(
+            1 for item in visible_requests
+            if "attente" in (item["status"] or "").lower()
+        )
+
+        cards = []
+        for key in get_menu_order():
+            if not workspace_option_allowed(key, user):
+                continue
+            _menu_icon, label, href = MENU_ITEMS[key]
+            cards.append(f"""
+            <a class="workspace-option" href="{esc(href)}">
+                <div class="workspace-option-icon">{workspace_icon_svg(key)}</div>
+                <h3>{esc(label)}</h3>
+                <p>{esc(WORKSPACE_OPTION_DETAILS[key])}</p>
+                <div class="workspace-option-open"><span>Ouvrir cette option</span><span>→</span></div>
+            </a>
+            """)
+
+        body = f"""
+        <section class="workspace-hero">
+            <div class="workspace-hero-content">
+                <div>
+                    <span class="eyebrow" style="color:#99f6e4">Votre espace professionnel</span>
+                    <h2>Bienvenue, {esc(user['name'])}</h2>
+                    <p>Sélectionnez une option pour accéder à la fonction correspondante. Les éléments affichés respectent votre rôle et vos autorisations.</p>
+                </div>
+                <div class="workspace-hero-actions">
+                    <a class="btn" href="/requests/new">＋ Nouvelle demande</a>
+                    <a class="btn secondary" href="/profile">Mon profil</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="workspace-summary" aria-label="Résumé de votre espace">
+            <div class="workspace-summary-card"><span class="muted">Demandes visibles</span><strong>{len(visible_requests)}</strong><small>Selon votre rôle</small></div>
+            <div class="workspace-summary-card"><span class="muted">En attente</span><strong>{pending_count}</strong><small>Nécessitent un suivi</small></div>
+            <div class="workspace-summary-card"><span class="muted">Rapports véhicules</span><strong>{len(visible_reports)}</strong><small>Rapports accessibles</small></div>
+        </section>
+
+        <section>
+            <div class="workspace-section-head">
+                <div><span class="eyebrow">Menu principal</span><h2>Que souhaitez-vous faire ?</h2></div>
+                <p class="muted">Cliquez sur une carte pour ouvrir une nouvelle page.</p>
+            </div>
+            <div class="workspace-options">{''.join(cards)}</div>
+        </section>
+        """
+        self.send_html(layout("Accueil", body, user, page_key="home"))
+
     def login(self, method: str) -> None:
         error = ""
         if method == "POST":
@@ -695,7 +797,7 @@ class FundFlowHandler(BaseHTTPRequestHandler):
                 sid = secrets.token_urlsafe(32)
                 SESSION_STORE[sid] = int(user["id"])
                 self.send_response(303)
-                self.send_header("Location", "/dashboard")
+                self.send_header("Location", "/home")
                 self.send_header("Set-Cookie", f"sid={sid}; HttpOnly; Path=/; SameSite=Lax")
                 self.end_headers()
                 return
@@ -1661,4 +1763,5 @@ if __name__ == "__main__":
                 input("Appuie sur Entrée pour fermer...")
         except EOFError:
             pass
+
 
