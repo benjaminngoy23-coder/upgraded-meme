@@ -408,7 +408,7 @@ def build_sidebar(user: sqlite3.Row, logo_html: str) -> str:
         css = "nav-link logout-link" if key == "logout" else "nav-link"
         links.append(f'<a class="{css}" href="{href}"><span class="nav-icon">{icon}</span><span>{esc(label)}</span></a>')
     return f"""
-    <aside class="sidebar">
+    <aside class="sidebar" id="appSidebar" aria-label="Menu principal">
         <div class="brand">{logo_html}<div><strong>{APP_NAME}</strong><small>Gestion des demandes</small></div></div>
         <nav class="nav-list">{''.join(links)}</nav>
     </aside>
@@ -476,6 +476,55 @@ def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head
         if sidebar_position == "right":
             body_classes.append("sidebar-right")
     main_class = "content" if user else ("public-page" if page_key == "home" else "auth-page")
+    menu_controls = ""
+    sidebar_script = ""
+    if user:
+        sidebar_storage_key = f"fundflow_sidebar_open_{int(user['id'])}"
+        menu_controls = """
+        <button type="button" class="sidebar-toggle" id="sidebarToggle" aria-controls="appSidebar" aria-expanded="false" title="Ouvrir le menu">
+            <span class="sidebar-toggle-icon" id="sidebarToggleIcon">☰</span>
+            <span class="sidebar-toggle-label" id="sidebarToggleLabel">Ouvrir</span>
+        </button>
+        <button type="button" class="sidebar-overlay" id="sidebarOverlay" aria-label="Fermer le menu"></button>
+        """
+        sidebar_script = """
+        <script>
+        (function () {
+            const body = document.body;
+            const toggle = document.getElementById('sidebarToggle');
+            const overlay = document.getElementById('sidebarOverlay');
+            const icon = document.getElementById('sidebarToggleIcon');
+            const label = document.getElementById('sidebarToggleLabel');
+            const storageKey = __STORAGE_KEY__;
+            if (!toggle) return;
+
+            function setMenu(open, remember) {
+                body.classList.toggle('sidebar-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                toggle.setAttribute('title', open ? 'Fermer le menu' : 'Ouvrir le menu');
+                icon.textContent = open ? '×' : '☰';
+                label.textContent = open ? 'Fermer' : 'Ouvrir';
+                if (remember !== false) {
+                    localStorage.setItem(storageKey, open ? '1' : '0');
+                }
+            }
+
+            setMenu(localStorage.getItem(storageKey) === '1', false);
+            toggle.addEventListener('click', function () {
+                setMenu(!body.classList.contains('sidebar-open'));
+            });
+            overlay.addEventListener('click', function () { setMenu(false); });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') setMenu(false);
+            });
+            document.querySelectorAll('#appSidebar a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    if (window.innerWidth <= 1100) setMenu(false);
+                });
+            });
+        })();
+        </script>
+        """.replace("__STORAGE_KEY__", json.dumps(sidebar_storage_key))
     return f"""<!doctype html>
 <html lang="fr">
 <head>
@@ -491,10 +540,12 @@ def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head
 <body class="{' '.join(body_classes)}" style="--page-bg:{page_color};--personal-bg-image:{bg_image_css};--personal-bg-opacity:{opacity}">
 <div class="personal-bg-layer" aria-hidden="true"></div>
 {nav}
+{menu_controls}
 <main class="{main_class}">
 {top}
 {body}
 </main>
+{sidebar_script}
 </body>
 </html>"""
 
@@ -516,6 +567,41 @@ CSS = r"""
 .workspace-hero{position:relative;overflow:hidden;border-radius:26px;padding:34px;background:linear-gradient(135deg,#0f172a 0%,#0f766e 58%,#2563eb 100%);color:#fff;box-shadow:0 24px 60px rgba(15,23,42,.18);margin-bottom:24px}.workspace-hero:after{content:"";position:absolute;width:330px;height:330px;border-radius:50%;right:-100px;top:-150px;background:rgba(255,255,255,.11)}.workspace-hero-content{position:relative;z-index:2;display:flex;align-items:flex-end;justify-content:space-between;gap:24px}.workspace-hero h2{font-size:clamp(28px,4vw,44px);margin:7px 0 10px}.workspace-hero p{max-width:720px;margin:0;color:#dbeafe;font-size:17px}.workspace-hero-actions{display:flex;gap:10px;flex-wrap:wrap}.workspace-hero .btn{background:#fff;color:#0f172a}.workspace-hero .btn.secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.28)}.workspace-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:25px}.workspace-summary-card{background:rgba(255,255,255,.92);border:1px solid rgba(226,232,240,.9);border-radius:18px;padding:18px;box-shadow:0 10px 28px rgba(15,23,42,.06)}.workspace-summary-card strong{font-size:28px;display:block;margin-top:4px}.workspace-section-head{display:flex;justify-content:space-between;align-items:end;gap:18px;margin:8px 0 16px}.workspace-section-head h2{margin:4px 0}.workspace-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.workspace-option{position:relative;display:flex;flex-direction:column;min-height:230px;padding:24px;border-radius:22px;background:rgba(255,255,255,.95);border:1px solid var(--line);box-shadow:0 12px 32px rgba(15,23,42,.07);color:var(--text);overflow:hidden;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease}.workspace-option:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--primary),var(--accent))}.workspace-option:hover{transform:translateY(-5px);box-shadow:0 22px 48px rgba(15,23,42,.13);border-color:#99f6e4;color:var(--text)}.workspace-option-icon{width:62px;height:62px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#ccfbf1,#dbeafe);color:#0f766e;margin-bottom:20px}.workspace-option-icon svg{width:32px;height:32px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.workspace-option h3{font-size:20px;margin:0 0 9px}.workspace-option p{color:var(--muted);margin:0 0 20px;flex:1}.workspace-option-open{display:flex;align-items:center;justify-content:space-between;font-weight:800;color:var(--primary);padding-top:14px;border-top:1px solid var(--line)}.workspace-option-open span:last-child{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#ecfdf5;transition:transform .2s ease}.workspace-option:hover .workspace-option-open span:last-child{transform:translateX(3px)}
 @media(max-width:1050px){.workspace-options{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-hero-content{align-items:flex-start;flex-direction:column}.workspace-summary{grid-template-columns:repeat(3,minmax(150px,1fr));overflow:auto}}
 @media(max-width:680px){.workspace-options,.workspace-summary{grid-template-columns:1fr}.workspace-hero{padding:26px 20px}.workspace-section-head{display:block}.workspace-option{min-height:210px}}
+
+
+/* Menu latéral volontairement ouvrable et refermable */
+body.has-sidebar .sidebar{z-index:45;transform:translateX(-112%);transition:transform .26s ease,box-shadow .26s ease;will-change:transform}
+body.has-sidebar.sidebar-right .sidebar{transform:translateX(112%)}
+body.has-sidebar.sidebar-open .sidebar{transform:translateX(0)}
+body.has-sidebar .content,body.has-sidebar.sidebar-right .content{margin-left:0;margin-right:0;padding:32px clamp(20px,3vw,44px);transition:margin .26s ease,padding .26s ease}
+body.has-sidebar.sidebar-open:not(.sidebar-right) .content{margin-left:280px}
+body.has-sidebar.sidebar-open.sidebar-right .content{margin-right:280px}
+.sidebar-toggle{position:fixed;left:20px;bottom:20px;z-index:60;min-width:112px;height:46px;padding:0 15px;border-radius:15px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 14px 34px rgba(15,23,42,.28);border:1px solid rgba(255,255,255,.15);transition:left .26s ease,right .26s ease,transform .18s ease,background .18s ease}
+.sidebar-toggle:hover{background:#0f766e;transform:translateY(-2px)}
+.sidebar-toggle-icon{font-size:23px;line-height:1;font-weight:400}.sidebar-toggle-label{font-size:13px;font-weight:850;letter-spacing:.02em}
+body.sidebar-right .sidebar-toggle{left:auto;right:20px}
+body.sidebar-open:not(.sidebar-right) .sidebar-toggle{left:296px}
+body.sidebar-open.sidebar-right .sidebar-toggle{right:296px}
+.sidebar-overlay{position:fixed;inset:0;z-index:38;border:0;border-radius:0;padding:0;background:rgba(15,23,42,.48);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .24s ease}
+.sidebar-overlay:hover{transform:none;background:rgba(15,23,42,.48)}
+
+/* Accueil privé professionnel amélioré */
+.page-home .topbar{display:none}
+.page-home .content{padding-top:28px}
+.workspace-hero{padding:42px;border-radius:30px;background:linear-gradient(125deg,#07111f 0%,#0f3f49 48%,#0f766e 72%,#2563eb 120%);min-height:410px;margin-bottom:20px}
+.workspace-hero:after{width:420px;height:420px;right:-135px;top:-190px;background:rgba(255,255,255,.08)}
+.workspace-hero-glow{position:absolute;border-radius:50%;filter:blur(4px);pointer-events:none}.workspace-hero-glow-one{width:210px;height:210px;background:rgba(45,212,191,.16);left:38%;bottom:-105px}.workspace-hero-glow-two{width:160px;height:160px;background:rgba(96,165,250,.17);right:22%;top:-90px}
+.workspace-hero-content{align-items:stretch}.workspace-intro{max-width:720px;display:flex;flex-direction:column;justify-content:center}.workspace-hero-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}.workspace-role-pill,.workspace-date{display:inline-flex;align-items:center;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:850;border:1px solid rgba(255,255,255,.16)}.workspace-role-pill{background:rgba(153,246,228,.14);color:#ccfbf1}.workspace-date{background:rgba(255,255,255,.08);color:#dbeafe}
+.workspace-hero h2{font-size:clamp(34px,4.8vw,56px);letter-spacing:-.035em;max-width:780px;margin:8px 0 16px}.workspace-hero p{font-size:17px;max-width:680px}.workspace-hero-actions{margin-top:25px}.workspace-hero-actions .btn{padding:13px 18px;border-radius:14px}
+.workspace-hero-panel{position:relative;z-index:2;width:min(360px,100%);background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.18);border-radius:24px;padding:22px;backdrop-filter:blur(14px);box-shadow:0 20px 44px rgba(0,0,0,.16)}.workspace-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:17px;border-bottom:1px solid rgba(255,255,255,.14)}.workspace-panel-head div{display:flex;flex-direction:column}.workspace-panel-head small{color:#bfdbfe}.workspace-panel-head strong{font-size:19px}.workspace-live-dot{font-size:11px;font-weight:850;color:#d1fae5;padding:6px 9px;border-radius:999px;background:rgba(16,185,129,.2)}.workspace-live-dot:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#34d399;margin-right:6px;box-shadow:0 0 0 4px rgba(52,211,153,.12)}.workspace-panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:17px 0}.workspace-panel-grid div{background:rgba(255,255,255,.09);border-radius:15px;padding:13px}.workspace-panel-grid span{display:block;color:#bfdbfe;font-size:12px}.workspace-panel-grid strong{display:block;font-size:27px;margin-top:2px}.workspace-panel-footer{display:flex;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14);font-size:13px}.workspace-panel-footer span{color:#bfdbfe}
+.workspace-summary{gap:16px;margin-bottom:32px}.workspace-summary-card{display:flex;align-items:center;gap:16px;padding:20px;border-radius:20px;background:rgba(255,255,255,.96);box-shadow:0 14px 35px rgba(15,23,42,.07);transition:transform .18s ease,box-shadow .18s ease}.workspace-summary-card:hover{transform:translateY(-3px);box-shadow:0 20px 42px rgba(15,23,42,.11)}.workspace-summary-card>div{min-width:0}.workspace-summary-card strong{font-size:32px;line-height:1}.workspace-summary-card small{display:block;color:var(--muted);margin-top:5px}.workspace-summary-icon{flex:0 0 auto;width:52px;height:52px;border-radius:17px;display:grid;place-items:center;background:#ccfbf1;color:#0f766e;font-size:23px;font-weight:900}.workspace-summary-icon.warning{background:#fef3c7;color:#b45309}.workspace-summary-icon.blue{background:#dbeafe;color:#1d4ed8}
+.workspace-main-section{margin-bottom:32px}.workspace-section-head{margin-bottom:20px}.workspace-section-head h2{font-size:30px;letter-spacing:-.02em}.workspace-options{gap:20px}.workspace-option{min-height:245px;padding:24px;border-radius:24px;background:linear-gradient(155deg,rgba(255,255,255,.99),rgba(248,250,252,.94));box-shadow:0 14px 38px rgba(15,23,42,.075)}.workspace-option:before{height:6px}.workspace-option-top{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.workspace-option-number{font-size:12px;font-weight:900;color:#94a3b8;letter-spacing:.08em}.workspace-option[data-option="dashboard"]:before{background:linear-gradient(90deg,#2563eb,#60a5fa)}.workspace-option[data-option="new_request"]:before{background:linear-gradient(90deg,#0f766e,#2dd4bf)}.workspace-option[data-option="vehicle_reports"]:before,.workspace-option[data-option="vehicle_positions"]:before{background:linear-gradient(90deg,#ea580c,#fb923c)}.workspace-option[data-option="moods"]:before{background:linear-gradient(90deg,#7c3aed,#a78bfa)}.workspace-option[data-option="appearance"]:before{background:linear-gradient(90deg,#db2777,#f472b6)}.workspace-option[data-option="profile"]:before{background:linear-gradient(90deg,#0891b2,#22d3ee)}.workspace-option[data-option="users"]:before{background:linear-gradient(90deg,#4f46e5,#818cf8)}.workspace-option[data-option="settings"]:before{background:linear-gradient(90deg,#334155,#64748b)}.workspace-option:hover{transform:translateY(-7px)}.workspace-option h3{font-size:21px;margin-top:2px}.workspace-option-open{font-size:14px}
+.workspace-lower-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr);gap:20px;margin-bottom:60px}.workspace-recent-card,.workspace-help-card{border-radius:24px;overflow:hidden;box-shadow:0 16px 42px rgba(15,23,42,.08)}.workspace-recent-card{background:rgba(255,255,255,.97);border:1px solid var(--line);padding:24px}.workspace-card-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}.workspace-card-heading h2{margin:5px 0 0}.workspace-recent-list{display:grid;gap:10px}.workspace-recent-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:13px;padding:13px;border:1px solid var(--line);border-radius:16px;color:var(--text);background:#fff;transition:background .18s ease,transform .18s ease,border-color .18s ease}.workspace-recent-item:hover{background:#f8fafc;border-color:#99f6e4;transform:translateX(3px);color:var(--text)}.workspace-recent-id{width:45px;height:45px;border-radius:14px;background:#ecfdf5;color:#0f766e;display:grid;place-items:center;font-weight:900}.workspace-recent-copy{display:flex;flex-direction:column;min-width:0}.workspace-recent-copy strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.workspace-recent-copy span{color:var(--muted);font-size:13px}.workspace-recent-arrow{font-size:20px;color:var(--primary)}.workspace-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:35px;border:1px dashed #cbd5e1;border-radius:18px;color:var(--muted)}.workspace-empty strong{color:var(--text);margin-bottom:4px}.workspace-help-card{position:relative;background:linear-gradient(145deg,#0f172a,#164e63);color:#fff;padding:28px}.workspace-help-card:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;right:-70px;bottom:-80px;background:rgba(45,212,191,.13)}.workspace-help-card>*{position:relative;z-index:2}.workspace-help-icon{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:rgba(255,255,255,.12);font-size:24px;font-weight:900;margin-bottom:26px}.workspace-help-card h2{font-size:27px;margin:8px 0 12px}.workspace-help-card p{color:#cbd5e1}.workspace-help-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.workspace-help-card .btn{background:#fff;color:#0f172a}.workspace-help-card .btn.secondary{background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2)}
+
+@media(max-width:1100px){body.has-sidebar.sidebar-open:not(.sidebar-right) .content,body.has-sidebar.sidebar-open.sidebar-right .content{margin-left:0;margin-right:0}body.has-sidebar .sidebar,body.has-sidebar.sidebar-right .sidebar{position:fixed;width:min(300px,88vw)}body.sidebar-open:not(.sidebar-right) .sidebar-toggle{left:min(310px,calc(88vw + 10px))}body.sidebar-open.sidebar-right .sidebar-toggle{right:min(310px,calc(88vw + 10px))}body.sidebar-open .sidebar-overlay{opacity:1;pointer-events:auto}.workspace-hero-content{display:grid;grid-template-columns:1fr}.workspace-hero-panel{width:100%}.workspace-lower-grid{grid-template-columns:1fr}}
+@media(max-width:760px){body.has-sidebar .content,body.has-sidebar.sidebar-right .content{padding:22px 15px 80px}.sidebar-toggle{left:14px;bottom:14px;min-width:102px;height:44px}.sidebar-right .sidebar-toggle{right:14px}.workspace-hero{padding:28px 22px;min-height:auto}.workspace-hero h2{font-size:36px}.workspace-panel-grid{grid-template-columns:1fr 1fr}.workspace-summary{display:grid;overflow:visible}.workspace-summary-card{padding:17px}.workspace-card-heading{align-items:flex-start}.workspace-recent-item{grid-template-columns:auto minmax(0,1fr) auto}.workspace-recent-status{display:none}.workspace-lower-grid{margin-bottom:90px}}
+@media(max-width:520px){.workspace-hero-actions,.workspace-help-actions{display:grid}.workspace-hero-actions .btn,.workspace-help-actions .btn{text-align:center}.workspace-panel-grid{grid-template-columns:1fr 1fr}.workspace-summary-icon{width:46px;height:46px}.workspace-section-head h2{font-size:26px}.workspace-options{grid-template-columns:1fr}.workspace-option{min-height:225px}.workspace-recent-arrow{display:none}.workspace-recent-item{grid-template-columns:auto minmax(0,1fr)}}
+
 
 """
 
@@ -740,6 +826,10 @@ class FundFlowHandler(BaseHTTPRequestHandler):
             1 for item in visible_requests
             if "attente" in (item["status"] or "").lower()
         )
+        completed_count = sum(
+            1 for item in visible_requests
+            if any(word in (item["status"] or "").lower() for word in ("clôt", "libér", "approuv"))
+        )
 
         cards = []
         for key in get_menu_order():
@@ -747,41 +837,118 @@ class FundFlowHandler(BaseHTTPRequestHandler):
                 continue
             _menu_icon, label, href = MENU_ITEMS[key]
             cards.append(f"""
-            <a class="workspace-option" href="{esc(href)}">
-                <div class="workspace-option-icon">{workspace_icon_svg(key)}</div>
+            <a class="workspace-option" data-option="{esc(key)}" href="{esc(href)}">
+                <div class="workspace-option-top">
+                    <div class="workspace-option-icon">{workspace_icon_svg(key)}</div>
+                    <span class="workspace-option-number">{len(cards) + 1:02d}</span>
+                </div>
                 <h3>{esc(label)}</h3>
                 <p>{esc(WORKSPACE_OPTION_DETAILS[key])}</p>
-                <div class="workspace-option-open"><span>Ouvrir cette option</span><span>→</span></div>
+                <div class="workspace-option-open"><span>Accéder à l’option</span><span>→</span></div>
             </a>
             """)
 
+        recent_items = []
+        for request in visible_requests[:4]:
+            recent_items.append(f"""
+            <a class="workspace-recent-item" href="/requests/{request['id']}">
+                <div class="workspace-recent-id">#{request['id']}</div>
+                <div class="workspace-recent-copy">
+                    <strong>{esc(request['title'])}</strong>
+                    <span>{esc(request['request_type'])} · {esc(request['evaluator_department'])}</span>
+                </div>
+                <div class="workspace-recent-status">{status_badge(request['status'])}</div>
+                <span class="workspace-recent-arrow">→</span>
+            </a>
+            """)
+        recent_html = ''.join(recent_items) or '<div class="workspace-empty"><strong>Aucune demande récente</strong><span>Créez votre première demande pour commencer le suivi.</span></div>'
+
+        first_name = (user['name'] or 'Utilisateur').split()[0]
+        today = datetime.now()
+        month_names = (
+            "janvier", "février", "mars", "avril", "mai", "juin",
+            "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+        )
+        date_label = f"{today.day} {month_names[today.month - 1]} {today.year}"
+        role_label = ROLES.get(user['role'], user['role'])
+
         body = f"""
         <section class="workspace-hero">
+            <div class="workspace-hero-glow workspace-hero-glow-one"></div>
+            <div class="workspace-hero-glow workspace-hero-glow-two"></div>
             <div class="workspace-hero-content">
-                <div>
+                <div class="workspace-intro">
+                    <div class="workspace-hero-meta">
+                        <span class="workspace-role-pill">{esc(role_label)}</span>
+                        <span class="workspace-date">{esc(date_label)}</span>
+                    </div>
                     <span class="eyebrow" style="color:#99f6e4">Votre espace professionnel</span>
-                    <h2>Bienvenue, {esc(user['name'])}</h2>
-                    <p>Sélectionnez une option pour accéder à la fonction correspondante. Les éléments affichés respectent votre rôle et vos autorisations.</p>
+                    <h2>Bonjour {esc(first_name)},<br>que souhaitez-vous accomplir ?</h2>
+                    <p>Retrouvez vos outils, vos demandes et les actions autorisées par votre rôle dans un espace clair et sécurisé.</p>
+                    <div class="workspace-hero-actions">
+                        <a class="btn" href="/requests/new">＋ Créer une demande</a>
+                        <a class="btn secondary" href="/dashboard">Voir le tableau de bord</a>
+                    </div>
                 </div>
-                <div class="workspace-hero-actions">
-                    <a class="btn" href="/requests/new">＋ Nouvelle demande</a>
-                    <a class="btn secondary" href="/profile">Mon profil</a>
-                </div>
+                <aside class="workspace-hero-panel">
+                    <div class="workspace-panel-head">
+                        <div><small>Résumé instantané</small><strong>Votre activité</strong></div>
+                        <span class="workspace-live-dot">En ligne</span>
+                    </div>
+                    <div class="workspace-panel-grid">
+                        <div><span>Options</span><strong>{len(cards)}</strong></div>
+                        <div><span>Demandes</span><strong>{len(visible_requests)}</strong></div>
+                        <div><span>En attente</span><strong>{pending_count}</strong></div>
+                        <div><span>Terminées</span><strong>{completed_count}</strong></div>
+                    </div>
+                    <div class="workspace-panel-footer">
+                        <span>Service</span><strong>{esc(user['department'])}</strong>
+                    </div>
+                </aside>
             </div>
         </section>
 
         <section class="workspace-summary" aria-label="Résumé de votre espace">
-            <div class="workspace-summary-card"><span class="muted">Demandes visibles</span><strong>{len(visible_requests)}</strong><small>Selon votre rôle</small></div>
-            <div class="workspace-summary-card"><span class="muted">En attente</span><strong>{pending_count}</strong><small>Nécessitent un suivi</small></div>
-            <div class="workspace-summary-card"><span class="muted">Rapports véhicules</span><strong>{len(visible_reports)}</strong><small>Rapports accessibles</small></div>
+            <div class="workspace-summary-card">
+                <span class="workspace-summary-icon">▤</span>
+                <div><span class="muted">Demandes visibles</span><strong>{len(visible_requests)}</strong><small>Selon votre niveau d’accès</small></div>
+            </div>
+            <div class="workspace-summary-card">
+                <span class="workspace-summary-icon warning">◷</span>
+                <div><span class="muted">En attente</span><strong>{pending_count}</strong><small>Éléments nécessitant un suivi</small></div>
+            </div>
+            <div class="workspace-summary-card">
+                <span class="workspace-summary-icon blue">⌖</span>
+                <div><span class="muted">Rapports véhicules</span><strong>{len(visible_reports)}</strong><small>Rapports accessibles</small></div>
+            </div>
         </section>
 
-        <section>
+        <section class="workspace-main-section">
             <div class="workspace-section-head">
-                <div><span class="eyebrow">Menu principal</span><h2>Que souhaitez-vous faire ?</h2></div>
-                <p class="muted">Cliquez sur une carte pour ouvrir une nouvelle page.</p>
+                <div><span class="eyebrow">Applications et services</span><h2>Accès rapide à vos options</h2></div>
+                <p class="muted">Chaque carte ouvre la page professionnelle correspondante.</p>
             </div>
             <div class="workspace-options">{''.join(cards)}</div>
+        </section>
+
+        <section class="workspace-lower-grid">
+            <div class="workspace-recent-card">
+                <div class="workspace-card-heading">
+                    <div><span class="eyebrow">Suivi</span><h2>Demandes récentes</h2></div>
+                    <a class="btn secondary" href="/dashboard">Tout afficher</a>
+                </div>
+                <div class="workspace-recent-list">{recent_html}</div>
+            </div>
+            <aside class="workspace-help-card">
+                <div class="workspace-help-icon">?</div>
+                <span class="eyebrow" style="color:#99f6e4">Besoin d’aide</span>
+                <h2>Votre espace reste simple à utiliser.</h2>
+                <p>Ouvrez le menu uniquement lorsque vous en avez besoin grâce au bouton flottant. Vous pouvez aussi personnaliser vos couleurs et votre arrière-plan privé.</p>
+                <div class="workspace-help-actions">
+                    <a class="btn" href="/appearance">Personnaliser</a>
+                    <a class="btn secondary" href="/profile">Mon profil</a>
+                </div>
+            </aside>
         </section>
         """
         self.send_html(layout("Accueil", body, user, page_key="home"))
@@ -1763,5 +1930,6 @@ if __name__ == "__main__":
                 input("Appuie sur Entrée pour fermer...")
         except EOFError:
             pass
+
 
 
