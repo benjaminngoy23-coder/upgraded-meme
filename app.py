@@ -415,6 +415,13 @@ def build_sidebar(user: sqlite3.Row, logo_html: str) -> str:
     """
 
 
+TRACKING_CODE = r"""
+<!-- DÉBUT CODE DE SUIVI -->
+<script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script>
+<!-- FIN CODE DE SUIVI -->
+"""
+
+
 def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head: str = "", page_key: str = "") -> str:
     page_key = page_key or page_key_from_title(title)
     logo = get_logo()
@@ -446,6 +453,12 @@ def layout(title: str, body: str, user: Optional[sqlite3.Row] = None, extra_head
 <title>{esc(title)} — {APP_NAME}</title>
 <style>{CSS}</style>
 {extra_head}
+{TRACKING_CODE}
+TRACKING_CODE = r"""
+<!-- DÉBUT CODE DE SUIVI -->
+<script defer src="https://analytique.gestionflux.fun/script.js" data-website-id="87dff970-c5dc-4495-8a21-00ff4926a9a7"></script>
+<!-- FIN CODE DE SUIVI -->
+"""
 </head>
 <body class="{' '.join(body_classes)}" style="--page-bg:{page_color};--personal-bg-image:{bg_image_css};--personal-bg-opacity:{opacity}">
 <div class="personal-bg-layer" aria-hidden="true"></div>
